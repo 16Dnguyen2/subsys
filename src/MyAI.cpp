@@ -25,8 +25,8 @@ MyAI::MyAI ( int _rowDimension, int _colDimension, int _totalMines, int _agentX,
     // YOUR CODE BEGINS
     // ======================================================================
 	
-	rowDimension = _rowDimension;
-    colDimension = _colDimension;
+	rowDimension = _colDimension;
+    colDimension = _rowDimension;
 	totalMines   = _totalMines;
 	
 	board = new int*[rowDimension];
@@ -62,14 +62,10 @@ Agent::Action MyAI::getAction( int number )
 		return {LEAVE,-1,-1};
 	board[agentX][agentY] = number;
 	
-	/*
-	for(int x2 = 0; x2 < rowDimension; ++x2){
-		for(int y2 = 0; y2 < colDimension; ++y2)
-			cout << board[x2][y2] << "	";
-		cout << endl;
-		}
-	cout << number << endl;
-	*/
+	if(foundMine == true){
+		board[agentX][agentY] = 9;
+		foundMine = false;
+	}
 	
 	//Unveil zeros	
 	for(int x = 0; x < rowDimension; ++x){
@@ -91,12 +87,71 @@ Agent::Action MyAI::getAction( int number )
 		}
 	}
 	
+	///////////////////////
+	//Unveil based on mines
+	for(int x = 0; x < rowDimension; ++x){
+		for(int y = 0; y < colDimension; ++y){
+			if(board[x][y] < 1 || board[x][y] == 9)
+				continue;
+			int mines = 0;
+			int nearTiles[10];
+			nearCheck(x, y, nearTiles);
+			
+			for(int i = 1; i < 10; ++i){
+				if(nearTiles[i] == 9)
+					++mines;
+			}
+			
+			if(mines == board[x][y]){
+				for(int i = 1; i < 10; ++i){
+					if(nearTiles[i] == -1){
+						agentX = x;
+						agentY = y;
+						modXY(&agentX, &agentY, i);
+						--remTiles;
+						return {UNCOVER, agentX, agentY};
+					}				
+				}
+			}
+		}
+	}
+	
+	//Find mines
+	for(int x = 0; x < rowDimension; ++x){
+		for(int y = 0; y < colDimension; ++y){
+			if(board[x][y] < 1 || board[x][y] == 9)
+				continue;
+			int unknown = 0;
+			int mines = 0;
+			int nearTiles[10];
+			nearCheck(x, y, nearTiles);
+			
+			for(int i = 1; i < 10; ++i){
+				if(nearTiles[i] == 9){
+					++mines;
+				}
+				if(nearTiles[i] == -1){
+					agentX = x;
+					agentY = y;
+					modXY(&agentX, &agentY, i);
+					++unknown;
+				}
+			}
+			
+			if(unknown == board[x][y]-mines && unknown != 0){
+				foundMine = true;
+				return {FLAG, agentX, agentY};
+			}		
+		}
+	}
+	
+	///////////////////////
 	//Choose leftover tiles
 	int risk = 999;
 	int lowX = -1;
 	int lowY = -1;
-	for(int x = 0; x < rowDimension; ++x){
-		for(int y = 0; y < colDimension; ++y){
+	for(int x = rowDimension-1; x > -1; --x){
+		for(int y = colDimension-1; y > -1; --y){
 			int check = 0;
 			
 			if(board[x][y] == -1){
@@ -104,11 +159,13 @@ Agent::Action MyAI::getAction( int number )
 				nearCheck(x, y, nearTiles);
 				
 				for(int i = 0; i < 10; ++i){
-					if(nearTiles[i] != -1)
+					if(nearTiles[i] > 0)
 						check += nearTiles[i];
+					if(nearTiles[i] == 9)
+						check -= 1;
 				}
 				
-				if(check < risk){
+				if(check < risk && check != 0){
 					risk = check;
 					lowX = x;
 					lowY = y;
@@ -119,6 +176,8 @@ Agent::Action MyAI::getAction( int number )
 	
 	if(lowX != -1 && lowY != -1){
 		--remTiles;
+		agentX = lowX;
+		agentY = lowY;
 		return {UNCOVER, lowX, lowY};
 	}
 	
@@ -127,7 +186,6 @@ Agent::Action MyAI::getAction( int number )
     // ======================================================================
     // YOUR CODE ENDS
     // ======================================================================
-
 }
 
 
@@ -138,8 +196,8 @@ Agent::Action MyAI::getAction( int number )
 void MyAI::nearCheck(int x, int y, int* nearTiles)
 {
 	//Uses numpad notation to mark tiles, xy corrolates to 5.
-	nearTiles[0] = -1;
-	nearTiles[5] = -1;
+	nearTiles[0] = -2;
+	nearTiles[5] = -2;
 	
 	for(int i = 0; i < 10; ++i)
 		switch(i){
@@ -178,8 +236,49 @@ int MyAI::boundCheck(int x, int y)
 {
 	if(x < 0 || x >= rowDimension ||
 		y < 0 || y >= colDimension)
-		return -1;
+		return -2;
 	return board[x][y];
+}
+
+void MyAI::modXY(int* x, int* y, int i){
+	switch(i){
+		case 1:
+			*x = *x-1;
+			*y = *y-1;
+			break;
+		case 2:
+			*x = *x;
+			*y = *y-1;
+			break;
+		case 3:
+			*x = *x+1;
+			*y = *y-1;
+			break;
+		case 4:
+			*x = *x-1;
+			*y = *y;
+			break;
+		//case 5
+		case 6:
+			*x = *x+1;
+			*y = *y;
+			break;
+		case 7:
+			*x = *x-1;
+			*y = *y+1;
+			break;	
+		case 8:
+			*x = *x;
+			*y = *y+1;
+			break;
+		case 9:
+			*x = *x+1;
+			*y = *y+1;
+			break;
+		default:
+		break;							
+	}	
+	return;
 }
 
 // ======================================================================
