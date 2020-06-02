@@ -38,6 +38,7 @@ public:
 
 	int** board;
 	int remTiles;
+	bool foundMine = false;
 
 	//Functions
     MyAI ( int _rowDimension, int _colDimension, int _totalMines, int _agentX, int _agentY );
@@ -46,6 +47,7 @@ public:
 
 	void nearCheck(int x, int y, int* nearTiles);
 	int boundCheck(int x, int y);
+	void modXY(int* x, int* y, int i);
 	
     // ======================================================================
     // YOUR CODE ENDS
